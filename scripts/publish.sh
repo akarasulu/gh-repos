@@ -112,6 +112,12 @@ echo ""
 echo "📁 Staging docs directory..."
 git add "$DOCS_DIR"
 git add mkdocs mkdocs.yml 2>/dev/null || true
+for readme_candidate in README.md Readme.md readme.md; do
+    if [[ -f "$readme_candidate" ]]; then
+        git add "$readme_candidate"
+        break
+    fi
+done
 
 # Check what we're about to commit
 echo "📋 Changes to be committed:"
