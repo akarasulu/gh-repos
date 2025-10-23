@@ -30,6 +30,7 @@ parse_repo_url() {
         echo "Unable to parse repository owner/name from URL: $url" >&2
         exit 1
     fi
+    REPO_NAME="${REPO_NAME%.git}"
 }
 
 update_mkdocs_config() {
@@ -38,7 +39,7 @@ update_mkdocs_config() {
     local repo_url="https://github.com/${owner}/${repo}"
     local docs_url="https://${owner}.github.io/${repo}"
 
-    python3 - <<PY
+    SITE_NAME=$(python3 - <<PY
 from pathlib import Path
 import re
 
@@ -86,7 +87,10 @@ text = re.sub(
 )
 
 path.write_text(text)
+print(site_name)
 PY
+)
+    SITE_NAME=${SITE_NAME:-"Project Documentation"}
 }
 
 prompt() {
@@ -182,6 +186,25 @@ cp -R templates/mkdocs/. mkdocs/
 
 echo "🛠️  Updating MkDocs configuration with repository details..."
 update_mkdocs_config "$REPO_OWNER" "$REPO_NAME"
+
+echo "🧾 Resetting README.md placeholder..."
+cat > README.md <<EOF
+# ${SITE_NAME}
+
+> Replace this README with information about ${SITE_NAME}.
+
+## Quick Start
+
+- Describe how to install or use the project.
+- Outline any prerequisites or environment setup steps.
+- Link to detailed documentation once it is ready.
+
+## Next Steps
+
+- Customize the documentation in \`mkdocs/\`.
+- Update package definitions under \`pkgs/\`.
+- Remove this placeholder content when you add real details.
+EOF
 
 echo "🧽 Clearing generated docs and previous APT repository..."
 rm -rf docs

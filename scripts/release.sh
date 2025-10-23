@@ -51,6 +51,31 @@ else
     exit 1
 fi
 
+repo_name="${repo_name%.git}"
+
+if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    if [[ -z "$repo_owner" ]]; then
+        repo_owner="${GITHUB_REPOSITORY%%/*}"
+    fi
+    if [[ -z "$repo_name" ]]; then
+        repo_name="${GITHUB_REPOSITORY##*/}"
+    fi
+fi
+
+repo_name="${repo_name%.git}"
+
+if [[ -z "$repo_name" || "$repo_name" == "$GITHUB_REPOSITORY" ]]; then
+    repo_name="$(basename "$WORKSPACE_ROOT")"
+fi
+
+if [[ -z "$repo_owner" || "$repo_owner" == "$GITHUB_REPOSITORY" ]]; then
+    repo_owner="$(git config --global user.name 2>/dev/null | awk '{print $1}')"
+fi
+
+if [[ -z "$repo_owner" ]]; then
+    repo_owner="$(whoami 2>/dev/null || echo 'user')"
+fi
+
 repo_slug="${repo_owner}/${repo_name}"
 docs_url="https://${repo_owner}.github.io/${repo_name}"
 apt_list_name="${repo_name}.list"
@@ -327,12 +352,17 @@ if [[ $deb_count -gt 0 ]]; then
     done
 fi
 
-if gh "${release_args[@]}"; then
-    echo "✅ GitHub release created successfully!"
-else
+if ! release_output=$(gh "${release_args[@]}" 2>&1); then
+    echo "$release_output"
+    if [[ "$release_output" == *'"workflow" scope may be required'* ]]; then
+        echo "💡 Tip: run 'gh auth refresh -h github.com -s repo -s workflow' to grant the required scopes, then retry."
+    fi
     echo "❌ Failed to create GitHub release"
     exit 1
 fi
+
+printf '%s\n' "$release_output"
+echo "✅ GitHub release created successfully!"
 
 # Display release information
 echo ""

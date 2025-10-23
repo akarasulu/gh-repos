@@ -14,22 +14,46 @@ KEYS_DIR="$WORKSPACE_ROOT/keys"
 repo_owner=""
 repo_name=""
 
-if [[ -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then
-    repo_owner="${BASH_REMATCH[1]}"
-    repo_name="${BASH_REMATCH[2]}"
-else
-    origin_url=$(git -C "$WORKSPACE_ROOT" config --get remote.origin.url 2>/dev/null || echo "")
-    if [[ "$origin_url" =~ ^git@github\.com:([^/]+)/(.+?)(\.git)?$ ]]; then
+    if [[ -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then
         repo_owner="${BASH_REMATCH[1]}"
         repo_name="${BASH_REMATCH[2]}"
-    elif [[ "$origin_url" =~ ^https://github\.com/([^/]+)/(.+?)(\.git)?$ ]]; then
-        repo_owner="${BASH_REMATCH[1]}"
-        repo_name="${BASH_REMATCH[2]}"
+    else
+        origin_url=$(git -C "$WORKSPACE_ROOT" config --get remote.origin.url 2>/dev/null || echo "")
+        if [[ "$origin_url" =~ ^git@github\.com:([^/]+)/(.+?)(\.git)?$ ]]; then
+            repo_owner="${BASH_REMATCH[1]}"
+            repo_name="${BASH_REMATCH[2]}"
+        elif [[ "$origin_url" =~ ^https://github\.com/([^/]+)/(.+?)(\.git)?$ ]]; then
+            repo_owner="${BASH_REMATCH[1]}"
+            repo_name="${BASH_REMATCH[2]}"
+        fi
+    fi
+
+repo_name="${repo_name%.git}"
+
+if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
+    if [[ -z "$repo_owner" ]]; then
+        repo_owner="${GITHUB_REPOSITORY%%/*}"
+    fi
+    if [[ -z "$repo_name" ]]; then
+        repo_name="${GITHUB_REPOSITORY##*/}"
     fi
 fi
 
-if [[ -z "$repo_owner" || -z "$repo_name" ]]; then
-    repo_owner="username"
+repo_name="${repo_name%.git}"
+
+if [[ -z "$repo_name" || "$repo_name" == "$GITHUB_REPOSITORY" ]]; then
+    repo_name="$(basename "$WORKSPACE_ROOT")"
+fi
+
+if [[ -z "$repo_owner" || "$repo_owner" == "$GITHUB_REPOSITORY" ]]; then
+    repo_owner="$(git config --global user.name 2>/dev/null | awk '{print $1}' )"
+fi
+
+if [[ -z "$repo_owner" ]]; then
+    repo_owner="$(whoami 2>/dev/null || echo 'user')"
+fi
+
+if [[ -z "$repo_name" ]]; then
     repo_name="apt-repo"
 fi
 
