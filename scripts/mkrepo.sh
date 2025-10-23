@@ -30,23 +30,19 @@ repo_name=""
 
 repo_name="${repo_name%.git}"
 
-if [[ -n "${GITHUB_REPOSITORY:-}" ]]; then
-    if [[ -z "$repo_owner" ]]; then
-        repo_owner="${GITHUB_REPOSITORY%%/*}"
-    fi
-    if [[ -z "$repo_name" ]]; then
-        repo_name="${GITHUB_REPOSITORY##*/}"
-    fi
+if [[ ( -z "$repo_owner" || -z "$repo_name" ) && -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then
+    repo_owner="${BASH_REMATCH[1]}"
+    repo_name="${BASH_REMATCH[2]}"
+    repo_name="${repo_name%.git}"
 fi
 
-repo_name="${repo_name%.git}"
-
-if [[ -z "$repo_name" || "$repo_name" == "$GITHUB_REPOSITORY" ]]; then
+if [[ -z "$repo_name" ]]; then
     repo_name="$(basename "$WORKSPACE_ROOT")"
 fi
 
-if [[ -z "$repo_owner" || "$repo_owner" == "$GITHUB_REPOSITORY" ]]; then
-    repo_owner="$(git config --global user.name 2>/dev/null | awk '{print $1}' )"
+if [[ -z "$repo_owner" ]]; then
+    repo_owner="$(git -C "$WORKSPACE_ROOT" config --get user.name 2>/dev/null || true)"
+    repo_owner="${repo_owner%% *}"
 fi
 
 if [[ -z "$repo_owner" ]]; then
