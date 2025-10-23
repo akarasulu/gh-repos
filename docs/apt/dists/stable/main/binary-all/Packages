@@ -17,9 +17,9 @@ Description: Collection of development utility scripts
  - Multiple utility scripts in one package
 Filename: pool/dev-tools_1.5.2_all.deb
 Size: 4308
-MD5sum: 5c0370345adee6b8d9fcd48fc51fe216
-SHA1: 47fe0c3ad0129cd2353bc7f8e935d8dde536852a
-SHA256: 380f8601c0c1d8f98b5747bda9bd9de54ec510939f7a4e0d5af94109ff81e356
+MD5sum: ca4ac5ef4b9c2fd983ce9c559a9f6154
+SHA1: b2e91949240ffe2edad6deb5746c7538c8eb39cb
+SHA256: f3c7b21150ca272d3d911d81cbd6440aade2b1da4cfe581ee3e50a5827e16808
 
 Package: hello-world
 Version: 1.0.0
@@ -35,9 +35,9 @@ Description: Simple hello world utility
  a greeting message to the terminal.
 Filename: pool/hello-world_1.0.0_all.deb
 Size: 992
-MD5sum: 7da25013acf131dbbf5f9ee5d95ec363
-SHA1: dc509c111b1d9dee0818ff33feb0bca28746e2ae
-SHA256: f7b174f2a044be55047c9fd27e984a4585138199dac5ce394f7c1b0831376abd
+MD5sum: 5d7b8260ab577aad6d33c06f8d7dda43
+SHA1: 9974228fab43966b67c21c096ecef55859c9c528
+SHA256: 30982d505c3f76c067cbf426e4a140123bfa0cbef28db875e7e70ed66ebcacfd
 
 Package: mock-monitor
 Version: 2.1.3
@@ -57,7 +57,7 @@ Description: Mock system monitoring service
  - Integrate with system service management
 Filename: pool/mock-monitor_2.1.3_all.deb
 Size: 2396
-MD5sum: 11e75019095b64c8dc89896f3affeb52
-SHA1: 4325781f37c0e00bc3f4d402ae668125f6303aa9
-SHA256: de6e56fa5b04d98c5d6efa1d6fcaac3b9ac6765ba966749e8cca4f1125065693
+MD5sum: d7ebb0e0c9e7f51e8ed3d248a4241c80
+SHA1: 5b4459097002883e62459c1f9ac4e877f27505db
+SHA256: f0939120862d56f1bde49469cefa68c4b62965362b188eebe900ca4e9ad3790c
 
