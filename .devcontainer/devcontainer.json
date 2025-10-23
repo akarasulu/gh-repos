@@ -3,19 +3,18 @@
   "build": {
     "dockerfile": "Dockerfile",
     "args": {
-	"USER_UID": "${localEnv:UID}",
-    	"USER_GID": "${localEnv:PID}",
-	"USERNAME": "${localEnv:USER}"
+      "USER_UID": "${localEnv:UID}",
+      "USER_GID": "${localEnv:GID}",
+      "USERNAME": "${localEnv:USER}"
     },
     "context": "."
   },
-  "image": null,
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   
   // Run as the non-root user you set in Dockerfile
-  "containerUser": "dev",
-  "remoteUser": "dev",
+  "containerUser": "${localEnv:USER}",
+  "remoteUser": "${localEnv:USER}",
   
   // Ensure that on Linux the container’s user UID/GID match your host user
   "updateRemoteUserUID": true,
@@ -31,16 +30,7 @@
 
   // Tools to run after the container is created
   "postCreateCommand": "git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\"",
-  
-  // Optional settings for VS Code
-  "settings": {
-    "terminal.integrated.shell.linux": "/bin/bash"
-  },
-  
-  "extensions": [
-    // Add any VS Code extensions you want inside container
-    "ms-vscode.cpptools",
-    "ms-vscode.vscode-typescript-tslint-plugin"
-  ]
+  "remoteEnv": {
+    "DEBIAN_FRONTEND": "noninteractive"
+  }
 }
-
