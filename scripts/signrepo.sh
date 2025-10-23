@@ -152,7 +152,7 @@ chmod u+w Release 2>/dev/null || true
 rm -f Release.gpg InRelease
 
 # Create detached signature (Release.gpg)
-if gpg --detach-sign --armor --local-user "$key_id" --output Release.gpg Release; then
+if gpg --detach-sign --armor --local-user "$key_id" --digest-algo SHA256 --cipher-algo AES256 --compress-algo 2 --output Release.gpg Release; then
     echo "✅ Created Release.gpg signature"
 else
     echo "❌ Failed to create Release.gpg signature"
@@ -160,7 +160,7 @@ else
 fi
 
 # Create inline signature (InRelease)
-if gpg --clearsign --local-user "$key_id" --output InRelease Release; then
+if gpg --clearsign --local-user "$key_id" --digest-algo SHA256 --cipher-algo AES256 --compress-algo 2 --output InRelease Release; then
     echo "✅ Created InRelease signature"
 else
     echo "❌ Failed to create InRelease signature"

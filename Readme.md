@@ -4,11 +4,11 @@
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Enabled-brightgreen)](https://pages.github.com/)
 [![Debian](https://img.shields.io/badge/Debian-12-red)](https://www.debian.org/)
 
-Transform your GitHub repository into a professional APT repository with automated package building, GPG signing, and GitHub Pages hosting.
+Turn a GitHub repository into a GH Pages hosted mkdocs website with APT repository.
 
 ## 🎯 Overview
 
-**GH-Repos** enables you to create and manage APT repositories using GitHub Pages with automated package building, signing, and deployment. Perfect for distributing your custom Debian packages with enterprise-grade infrastructure.
+**GH-Repos** enables you to create and manage APT repositories using GitHub Pages with automated package building, signing, and deployment. Perfect for distributing your custom Debian packages with secure GPG signatures.
 
 ### Key Features
 
@@ -17,7 +17,7 @@ Transform your GitHub repository into a professional APT repository with automat
 - 📦 **GitHub Pages Hosting** - Host APT repositories on GitHub's reliable infrastructure
 - 🚀 **CI/CD Integration** - Streamlined build and deployment workflows
 - 🛡️ **Security First** - Hardware token support and secure key management
-- 📚 **Professional Documentation** - Complete guides and API documentation
+- 📚 **Documentation** - Guides and documentation
 
 ## 🚀 Quick Start
 
@@ -30,13 +30,15 @@ Transform your GitHub repository into a professional APT repository with automat
 
 ### 1. Setup Environment
 
+<!-- TODO: fork then clone -->
+<!-- TODO: add command to drop in your own key/... -->
 ```bash
 # Export user ID for container alignment
 export UID=$(id -u)
 export GID=$(id -g)
 
 # Fork and clone this repository
-git clone https://github.com/YOUR_USERNAME/gh-repos.git
+git clone https://github.com/akarasulu/gh-repos.git
 cd gh-repos
 
 # Open in VS Code Dev Container
@@ -101,6 +103,8 @@ echo "deb https://YOUR_USERNAME.github.io/gh-repos/apt stable main" | sudo tee /
 sudo apt update
 sudo apt install my-awesome-tool
 ```
+
+<!-- TODO:  or just fire up the vagrant file -->
 
 ## 📁 Project Structure
 

@@ -122,13 +122,28 @@ EOF
 
 # Calculate checksums for Release file
 echo "MD5Sum:" >> "$release_file"
-(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" -exec md5sum {} \; | sed 's/\.\///') >> "$release_file"
+(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" | while read file; do
+    md5=$(md5sum "$file" | cut -d' ' -f1)
+    size=$(stat -c%s "$file")
+    path=${file#./}
+    printf " %s %7d %s\n" "$md5" "$size" "$path"
+done) >> "$release_file"
 
 echo "SHA1:" >> "$release_file"
-(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" -exec sha1sum {} \; | sed 's/\.\///') >> "$release_file"
+(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" | while read file; do
+    sha1=$(sha1sum "$file" | cut -d' ' -f1)
+    size=$(stat -c%s "$file")
+    path=${file#./}
+    printf " %s %7d %s\n" "$sha1" "$size" "$path"
+done) >> "$release_file"
 
 echo "SHA256:" >> "$release_file"
-(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" -exec sha256sum {} \; | sed 's/\.\///') >> "$release_file"
+(cd "$APT_REPO_DIR/dists/stable" && find . -type f -name "Packages*" | while read file; do
+    sha256=$(sha256sum "$file" | cut -d' ' -f1)
+    size=$(stat -c%s "$file")
+    path=${file#./}
+    printf " %s %7d %s\n" "$sha256" "$size" "$path"
+done) >> "$release_file"
 
 # Create repository configuration file for users
 echo "📝 Creating repository configuration..."
@@ -191,7 +206,7 @@ cat > "$APT_REPO_DIR/index.html" << EOF
 curl -fsSL \$(echo \$REPO_URL)/apt/repo-setup.sh | bash
 
 # Or manual setup:
-curl -fsSL \$(echo \$REPO_URL)/apt/apt-repo-pubkey.asc | sudo apt-key add -
+curl -fsSL \$(echo \$REPO_URL)/apt/apt-repo-pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/gh-repos.asc > /dev/null
 echo "deb \$(echo \$REPO_URL)/apt stable main" | sudo tee /etc/apt/sources.list.d/gh-repos.list
 sudo apt update</code></pre>
 
