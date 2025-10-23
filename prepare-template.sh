@@ -15,22 +15,22 @@ Arguments:
 EOF
 }
 
+TTY_FD=0
+
 prompt() {
     local message="$1"
     local input
-    if [[ -t 0 ]]; then
+    if [[ "$TTY_FD" -eq 0 ]]; then
         if ! read -rp "$message" input; then
             echo "Input aborted." >&2
             exit 1
         fi
-    elif [[ -r /dev/tty ]]; then
-        if ! read -rp "$message" input < /dev/tty; then
+    else
+        printf "%s" "$message" > /dev/tty
+        if ! IFS= read -r -u "$TTY_FD" input; then
             echo "Input aborted." >&2
             exit 1
         fi
-    else
-        echo "Cannot prompt for input: no interactive terminal available." >&2
-        exit 1
     fi
     REPLY="$input"
 }
@@ -48,6 +48,15 @@ fi
 if ! command -v gpg >/dev/null 2>&1; then
     echo "gpg is required but was not found in PATH." >&2
     exit 1
+fi
+
+if [[ ! -t 0 ]]; then
+    if [[ -r /dev/tty ]]; then
+        exec {TTY_FD}</dev/tty
+    else
+        echo "Cannot prompt for input: no interactive terminal available." >&2
+        exit 1
+    fi
 fi
 
 if [[ $# -lt 1 ]]; then
@@ -146,10 +155,17 @@ for i in "${!fingerprints[@]}"; do
 done
 
 selection=""
+attempts=0
+max_attempts=5
 while [[ -z "$selection" ]]; do
     prompt "Select a key to export [1-${#fingerprints[@]}]: "
     choice="$REPLY"
     if [[ -z "$choice" ]]; then
+        attempts=$((attempts + 1))
+        if (( attempts >= max_attempts )); then
+            echo "No selection detected after $max_attempts attempts. Exiting." >&2
+            exit 1
+        fi
         echo "No selection detected. Please choose a number between 1 and ${#fingerprints[@]}."
         continue
     fi
@@ -157,6 +173,11 @@ while [[ -z "$selection" ]]; do
         selection=$((choice - 1))
     else
         echo "Invalid selection. Please choose a number between 1 and ${#fingerprints[@]}."
+        attempts=$((attempts + 1))
+        if (( attempts >= max_attempts )); then
+            echo "Too many invalid attempts. Exiting." >&2
+            exit 1
+        fi
     fi
 done
 

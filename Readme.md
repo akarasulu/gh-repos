@@ -41,9 +41,9 @@ FORK_REPO=<your-repo-name>
 
 # Prepare your fork with placeholder docs and a fresh public key
 curl -sSL "https://raw.githubusercontent.com/${FORK_OWNER}/${FORK_REPO}/main/prepare-template.sh" | \
-  bash -s -- "git@github.com:${FORK_OWNER}/${FORK_REPO}.git" my-project-repo
+  bash -s -- "git@github.com:${FORK_OWNER}/${FORK_REPO}.git"
 
-cd my-project-repo  # choose any directory name when running the script
+cd ${FORK_REPO}
 
 # Open in VS Code Dev Container
 code .
