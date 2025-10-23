@@ -1,0 +1,16 @@
+#!/bin/bash
+# Placeholder binary for sys-info (simulates compiled C program)
+# This will be replaced by actual compiled binary during build
+
+echo "🖥️  System Information Tool v3.2.1"
+echo "==================================="
+echo ""
+echo "System: $(uname -s) $(uname -r) ($(uname -m))"
+echo "Hostname: $(hostname)"
+echo "Uptime: $(uptime -p 2>/dev/null || uptime)"
+echo "Memory: $(free -h | awk 'NR==2{printf "%.1f/%.1f GB (%.0f%%)", $3/1024/1024, $2/1024/1024, $3*100/$2}')"
+echo "Load Average: $(uptime | awk -F'load average:' '{print $2}')"
+echo "Disk Usage: $(df -h / | awk 'NR==2 {print $5 " of " $2 " used"}')"
+echo ""
+echo "📦 This is a demonstration package from GH-Repos"
+echo "⚡ In production, this would be a compiled C binary"

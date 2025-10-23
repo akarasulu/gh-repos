@@ -32,5 +32,14 @@
   "postCreateCommand": "git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\"",
   "remoteEnv": {
     "DEBIAN_FRONTEND": "noninteractive"
+  },
+
+  // Ensure OpenAI ChatGPT extension is installed on every rebuild
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "openai.chatgpt"
+      ]
+    }
   }
 }

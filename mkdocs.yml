@@ -1,19 +1,59 @@
 docs_dir: mkdocs
 site_dir: docs
-site_name: gh-repos
-site_description: GitHup pages as apt repositories
+site_name: GH-Repos
+site_description: GitHub Pages as APT repositories with automated package management
 repo_url: https://github.com/akarasulu/gh-repos
 repo_name: gh-repos
 nav:
   - Home: index.md
-  - Customize: customize.md
+  - Getting Started: usage.md
+  - Design & Architecture: design.md
+  - Build Process: build.md
+  - Customization: customize.md
   - Releases: releases.md
 theme:
   name: material
   palette:
     primary: indigo
     accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
 markdown_extensions:
   - toc:
       permalink: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/akarasulu/gh-repos
+  version:
+    provider: mike
 
