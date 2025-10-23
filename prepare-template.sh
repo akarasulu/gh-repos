@@ -15,22 +15,23 @@ Arguments:
 EOF
 }
 
-TTY_FD=0
-
 prompt() {
     local message="$1"
     local input
-    if [[ "$TTY_FD" -eq 0 ]]; then
+    if [[ -t 0 ]]; then
         if ! read -rp "$message" input; then
             echo "Input aborted." >&2
             exit 1
         fi
-    else
+    elif [[ -r /dev/tty ]]; then
         printf "%s" "$message" > /dev/tty
-        if ! IFS= read -r -u "$TTY_FD" input; then
+        if ! IFS= read -r input < /dev/tty; then
             echo "Input aborted." >&2
             exit 1
         fi
+    else
+        echo "Cannot prompt for input: no interactive terminal available." >&2
+        exit 1
     fi
     REPLY="$input"
 }
@@ -48,15 +49,6 @@ fi
 if ! command -v gpg >/dev/null 2>&1; then
     echo "gpg is required but was not found in PATH." >&2
     exit 1
-fi
-
-if [[ ! -t 0 ]]; then
-    if [[ -r /dev/tty ]]; then
-        exec {TTY_FD}</dev/tty
-    else
-        echo "Cannot prompt for input: no interactive terminal available." >&2
-        exit 1
-    fi
 fi
 
 if [[ $# -lt 1 ]]; then
