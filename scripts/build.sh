@@ -10,6 +10,15 @@ WORKSPACE_ROOT="$(dirname "$SCRIPT_DIR")"
 echo "🚀 Starting GH-Repos build process..."
 echo "════════════════════════════════════"
 
+# Fix common permission issues when running in container
+if [[ "${REMOTE_CONTAINERS:-}" == "true" ]] || [[ "${CODESPACES:-}" == "true" ]] || [[ -f "/.dockerenv" ]]; then
+    echo "🔧 Ensuring proper permissions..."
+    # Fix ownership of workspace files
+    sudo chown -R $(id -u):$(id -g) "$WORKSPACE_ROOT" 2>/dev/null || true
+    # Ensure we can write to key directories
+    sudo chmod -R u+w "$WORKSPACE_ROOT" 2>/dev/null || true
+fi
+
 # Check if we're in a dev container or need to use docker
 if [[ "${REMOTE_CONTAINERS:-}" == "true" ]] || [[ "${CODESPACES:-}" == "true" ]] || [[ -f "/.dockerenv" ]]; then
     echo "📦 Running inside container - executing scripts directly"

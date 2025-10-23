@@ -13,7 +13,7 @@ RUN apt-get update \
         # Security and version control
         gnupg2 git sudo \
         # Python and pip for MkDocs (for mkdocs.sh)
-        python3 python3-pip python3-venv \
+        python3 python3-pip python3-venv python3-full \
         # Compression and archiving tools (for mkrepo.sh)
         gzip bzip2 tar xz-utils \
         # Network and download tools (for generated scripts)

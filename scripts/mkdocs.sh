@@ -28,10 +28,35 @@ fi
 
 # Install mkdocs and dependencies if not already installed
 echo "📦 Checking MkDocs installation..."
-if ! command -v mkdocs &> /dev/null; then
-    echo "Installing MkDocs and dependencies..."
-    pip3 install --user mkdocs mkdocs-material pymdown-extensions
-    export PATH="$HOME/.local/bin:$PATH"
+
+# Check if mkdocs is available in PATH or in our virtual environment
+VENV_DIR="$HOME/.local/mkdocs-venv"
+MKDOCS_CMD="mkdocs"
+
+if [[ -f "$VENV_DIR/bin/mkdocs" ]]; then
+    # Use virtual environment mkdocs
+    MKDOCS_CMD="$VENV_DIR/bin/mkdocs"
+    echo "✅ Found MkDocs in virtual environment"
+elif command -v mkdocs &> /dev/null; then
+    # Use system mkdocs
+    echo "✅ Found MkDocs in system PATH"
+else
+    echo "Installing MkDocs and dependencies in virtual environment..."
+    
+    # Create virtual environment if it doesn't exist
+    if [[ ! -d "$VENV_DIR" ]]; then
+        python3 -m venv "$VENV_DIR"
+        echo "📁 Created virtual environment at $VENV_DIR"
+    fi
+    
+    # Install packages in virtual environment
+    "$VENV_DIR/bin/pip" install --upgrade pip
+    "$VENV_DIR/bin/pip" install mkdocs mkdocs-material pymdown-extensions
+    
+    # Set mkdocs command to use virtual environment
+    MKDOCS_CMD="$VENV_DIR/bin/mkdocs"
+    
+    echo "✅ MkDocs installed successfully in virtual environment"
 fi
 
 # Clean existing docs directory (but preserve apt/ subdirectory if it exists)
@@ -43,13 +68,24 @@ if [[ -d "$DOCS_DIR" ]]; then
         mv "$DOCS_DIR/apt" "$DOCS_DIR.apt.backup" 2>/dev/null || true
     fi
     
-    # Remove everything else
-    rm -rf "$DOCS_DIR"/*
+    # Try to change permissions first to handle permission issues
+    echo "🔧 Adjusting permissions for cleanup..."
+    sudo chown -R $(id -u):$(id -g) "$DOCS_DIR" 2>/dev/null || true
+    sudo chmod -R u+w "$DOCS_DIR" 2>/dev/null || true
+    find "$DOCS_DIR" -type f -not -path "*/apt/*" -exec chmod +w {} \; 2>/dev/null || true
+    find "$DOCS_DIR" -type d -not -path "*/apt/*" -exec chmod +wx {} \; 2>/dev/null || true
     
-    # Restore apt directory if we backed it up
+    # Remove everything else (excluding apt directory if we backed it up)
     if [[ -d "$DOCS_DIR.apt.backup" ]]; then
-        mkdir -p "$DOCS_DIR"
-        mv "$DOCS_DIR.apt.backup" "$DOCS_DIR/apt"
+        # Remove everything except the backup
+        find "$DOCS_DIR" -mindepth 1 -maxdepth 1 -not -name "$(basename "$DOCS_DIR.apt.backup")" -exec rm -rf {} \; 2>/dev/null || {
+            echo "⚠️  Some files could not be removed due to permissions. Continuing with build..."
+        }
+    else
+        # Remove everything
+        rm -rf "$DOCS_DIR"/* 2>/dev/null || {
+            echo "⚠️  Some files could not be removed due to permissions. Continuing with build..."
+        }
     fi
 else
     mkdir -p "$DOCS_DIR"
@@ -57,7 +93,38 @@ fi
 
 # Build the site
 echo "🔨 Building MkDocs site..."
-mkdocs build --clean --strict
+
+# Create a temporary build directory to avoid permission issues
+TEMP_DOCS_DIR=$(mktemp -d)
+echo "📁 Using temporary build directory: $TEMP_DOCS_DIR"
+
+# Build to temporary directory first
+$MKDOCS_CMD build --site-dir "$TEMP_DOCS_DIR" --clean --strict
+
+# Move the built site to the target directory
+echo "📦 Moving built site to $DOCS_DIR..."
+
+# Ensure target directory exists
+mkdir -p "$DOCS_DIR"
+
+# Copy the built site (this will overwrite existing files)
+# Ensure we have write permissions before copying
+sudo chown -R $(id -u):$(id -g) "$DOCS_DIR" 2>/dev/null || true
+sudo chmod -R u+w "$DOCS_DIR" 2>/dev/null || true
+cp -r "$TEMP_DOCS_DIR"/* "$DOCS_DIR/" 2>/dev/null || {
+    echo "⚠️  Permission issues detected, using sudo to copy..."
+    sudo cp -r "$TEMP_DOCS_DIR"/* "$DOCS_DIR/"
+    sudo chown -R $(id -u):$(id -g) "$DOCS_DIR"
+}
+
+# Restore apt directory if we backed it up
+if [[ -d "$DOCS_DIR.apt.backup" ]]; then
+    echo "🔄 Restoring APT repository..."
+    mv "$DOCS_DIR.apt.backup" "$DOCS_DIR/apt"
+fi
+
+# Clean up temporary directory
+rm -rf "$TEMP_DOCS_DIR"
 
 # Verify the build
 if [[ ! -f "$DOCS_DIR/index.html" ]]; then

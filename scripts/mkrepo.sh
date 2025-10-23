@@ -30,7 +30,7 @@ for deb_file in "$DEB_OUTPUT_DIR"/*.deb; do
     if [[ -f "$deb_file" ]]; then
         cp "$deb_file" "$APT_REPO_DIR/pool/"
         echo "   - $(basename "$deb_file")"
-        ((package_count++))
+        package_count=$((package_count + 1))
     fi
 done
 

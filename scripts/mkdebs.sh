@@ -13,7 +13,11 @@ DEB_OUTPUT_DIR="$WORKSPACE_ROOT/debs"
 echo "📦 Building Debian packages..."
 
 # Create necessary directories
-mkdir -p "$BUILD_DIR" "$DEB_OUTPUT_DIR"
+mkdir -p "$BUILD_DIR" "$DEB_OUTPUT_DIR" 2>/dev/null || {
+    echo "🔧 Permission issue detected, using sudo to create directories..."
+    sudo mkdir -p "$BUILD_DIR" "$DEB_OUTPUT_DIR"
+    sudo chown -R $(id -u):$(id -g) "$BUILD_DIR" "$DEB_OUTPUT_DIR"
+}
 
 # Check if pkgs directory exists
 if [[ ! -d "$PKGS_DIR" ]]; then
@@ -50,7 +54,7 @@ for pkg_dir in "${package_dirs[@]}"; do
     if [[ ! -f "$pkg_dir/DEBIAN/control" ]]; then
         echo "❌ Error: Missing DEBIAN/control file in $pkg_name"
         echo "💡 Create $pkg_dir/DEBIAN/control with package metadata"
-        ((failed_packages++))
+        failed_packages=$((failed_packages + 1))
         continue
     fi
     
@@ -58,19 +62,19 @@ for pkg_dir in "${package_dirs[@]}"; do
     echo "📋 Validating package metadata..."
     if ! grep -q "^Package:" "$pkg_dir/DEBIAN/control"; then
         echo "❌ Error: Missing 'Package:' field in control file"
-        ((failed_packages++))
+        failed_packages=$((failed_packages + 1))
         continue
     fi
     
     if ! grep -q "^Version:" "$pkg_dir/DEBIAN/control"; then
         echo "❌ Error: Missing 'Version:' field in control file"
-        ((failed_packages++))
+        failed_packages=$((failed_packages + 1))
         continue
     fi
     
     if ! grep -q "^Architecture:" "$pkg_dir/DEBIAN/control"; then
         echo "❌ Error: Missing 'Architecture:' field in control file"
-        ((failed_packages++))
+        failed_packages=$((failed_packages + 1))
         continue
     fi
     
@@ -85,8 +89,11 @@ for pkg_dir in "${package_dirs[@]}"; do
     
     # Create build workspace
     build_workspace="$BUILD_DIR/$pkg_name"
-    rm -rf "$build_workspace"
-    mkdir -p "$build_workspace"
+    rm -rf "$build_workspace" 2>/dev/null || sudo rm -rf "$build_workspace" 2>/dev/null || true
+    mkdir -p "$build_workspace" 2>/dev/null || {
+        sudo mkdir -p "$build_workspace"
+        sudo chown -R $(id -u):$(id -g) "$build_workspace"
+    }
     
     # Copy package contents to build workspace
     echo "📂 Copying package contents..."
@@ -107,7 +114,7 @@ for pkg_dir in "${package_dirs[@]}"; do
             echo "✅ Custom build script completed successfully"
         else
             echo "❌ Custom build script failed"
-            ((failed_packages++))
+            failed_packages=$((failed_packages + 1))
             continue
         fi
         cd "$WORKSPACE_ROOT"
@@ -127,20 +134,23 @@ for pkg_dir in "${package_dirs[@]}"; do
         echo "🔍 Verifying package..."
         if dpkg-deb --info "$DEB_OUTPUT_DIR/$deb_filename" > /dev/null; then
             echo "✅ Package verification passed"
-            ((built_packages++))
+            built_packages=$((built_packages + 1))
         else
             echo "❌ Package verification failed"
             rm -f "$DEB_OUTPUT_DIR/$deb_filename"
-            ((failed_packages++))
+            failed_packages=$((failed_packages + 1))
         fi
     else
         echo "❌ Failed to build package: $pkg_name"
-        ((failed_packages++))
+        failed_packages=$((failed_packages + 1))
     fi
 done
 
 # Clean up build directory
-rm -rf "$BUILD_DIR"
+rm -rf "$BUILD_DIR" 2>/dev/null || {
+    echo "🔧 Permission issue removing build directory, using sudo..."
+    sudo rm -rf "$BUILD_DIR" 2>/dev/null || true
+}
 
 echo ""
 echo "📊 Build Summary"

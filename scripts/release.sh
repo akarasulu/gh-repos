@@ -100,7 +100,7 @@ if [[ -d "$DEB_OUTPUT_DIR" ]]; then
         if [[ -f "$deb_file" ]]; then
             cp "$deb_file" "$artifacts_dir/"
             echo "   📦 $(basename "$deb_file")"
-            ((deb_count++))
+            deb_count=$((deb_count + 1))
         fi
     done
 fi
@@ -113,7 +113,7 @@ if [[ -d "$DOCS_DIR/apt/pool" ]]; then
             if [[ ! -f "$artifacts_dir/$deb_name" ]]; then
                 cp "$deb_file" "$artifacts_dir/"
                 echo "   📦 $deb_name (from repository)"
-                ((deb_count++))
+                deb_count=$((deb_count + 1))
             fi
         fi
     done

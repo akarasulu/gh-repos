@@ -41,27 +41,42 @@ elif [[ -n "${GPG_SIGNING_KEY:-}" ]]; then
     echo "🔑 Using GPG signing key: $GPG_SIGNING_KEY"
     key_id="$GPG_SIGNING_KEY"
 else
-    echo "🔍 Auto-detecting GPG key..."
+    echo "🔍 Detecting GPG key from repository public key..."
     
-    # Get list of secret keys
-    secret_keys=$(gpg --list-secret-keys --with-colons | grep '^sec:' | cut -d: -f5)
-    
-    if [[ -z "$secret_keys" ]]; then
-        echo "❌ Error: No GPG secret keys found"
-        echo "💡 Create a GPG key with: gpg --full-generate-key"
+    # Check if repository has a public key file
+    pubkey_file="$WORKSPACE_ROOT/keys/apt-repo-pubkey.asc"
+    if [[ ! -f "$pubkey_file" ]]; then
+        echo "❌ Error: Repository public key not found at $pubkey_file"
+        echo "💡 Expected file: keys/apt-repo-pubkey.asc"
+        echo "💡 Either:"
+        echo "   - Export your public key: gpg --armor --export YOUR_KEY_ID > keys/apt-repo-pubkey.asc"
+        echo "   - Or set GPG_KEY_ID environment variable"
         exit 1
     fi
     
-    # Use the first available key
-    key_id=$(echo "$secret_keys" | head -1)
-    echo "🔑 Using auto-detected key: $key_id"
+    # Extract key ID from the public key file
+    key_id=$(gpg --show-keys --with-colons "$pubkey_file" 2>/dev/null | grep '^pub:' | head -1 | cut -d: -f5)
+    
+    if [[ -z "$key_id" ]]; then
+        echo "❌ Error: Could not extract key ID from $pubkey_file"
+        echo "💡 Ensure the file contains a valid GPG public key"
+        exit 1
+    fi
+    
+    echo "🔑 Using key from repository: $key_id"
+    echo "� Public key file: $pubkey_file"
 fi
 
 # Verify the key exists and can be used
 if ! gpg --list-secret-keys "$key_id" &> /dev/null; then
-    echo "❌ Error: GPG key $key_id not found or not accessible"
-    echo "💡 Available keys:"
+    echo "❌ Error: GPG private key $key_id not found or not accessible"
+    echo "💡 The repository public key requires private key: $key_id"
+    echo "💡 Available private keys:"
     gpg --list-secret-keys --keyid-format SHORT
+    echo ""
+    echo "💡 If you have the private key on another machine:"
+    echo "   - Export: gpg --armor --export-secret-keys $key_id > private.key"
+    echo "   - Import: gpg --import private.key"
     exit 1
 fi
 
@@ -83,6 +98,19 @@ fi
 echo ""
 echo "🔏 Starting repository signing process..."
 
+# Fix file permissions that may have been set by container
+echo "🔧 Ensuring proper file permissions for signing..."
+if [[ -d "$APT_REPO_DIR" ]]; then
+    # Take ownership of the repository files
+    sudo chown -R $(id -u):$(id -g) "$APT_REPO_DIR" 2>/dev/null || {
+        echo "⚠️  Could not change ownership, trying to continue with current permissions..."
+    }
+    # Ensure we can write to the directories and files
+    chmod -R u+w "$APT_REPO_DIR" 2>/dev/null || {
+        echo "⚠️  Could not modify permissions, trying to continue..."
+    }
+fi
+
 # Sign individual .deb packages
 echo "📦 Signing individual packages..."
 package_count=0
@@ -90,7 +118,7 @@ signed_packages=0
 
 for deb_file in "$APT_REPO_DIR/pool"/*.deb; do
     if [[ -f "$deb_file" ]]; then
-        ((package_count++))
+        package_count=$((package_count + 1))
         package_name=$(basename "$deb_file")
         
         echo "   Signing: $package_name"
@@ -101,7 +129,7 @@ for deb_file in "$APT_REPO_DIR/pool"/*.deb; do
         # Create detached signature
         if gpg --detach-sign --armor --local-user "$key_id" --output "$deb_file.asc" "$deb_file"; then
             echo "   ✅ Signed: $package_name"
-            ((signed_packages++))
+            signed_packages=$((signed_packages + 1))
         else
             echo "   ❌ Failed to sign: $package_name"
         fi
@@ -115,6 +143,10 @@ echo ""
 echo "📄 Signing Release file..."
 
 cd "$APT_REPO_DIR/dists/stable"
+
+# Ensure we can write to this directory
+chmod u+w . 2>/dev/null || true
+chmod u+w Release 2>/dev/null || true
 
 # Remove existing signatures
 rm -f Release.gpg InRelease
@@ -173,20 +205,38 @@ cat > "$APT_REPO_DIR/verify-repo.sh" << EOF
 
 echo "🔍 Verifying GH-Repos APT repository signatures..."
 
-REPO_DIR="\${1:-.}"
-if [[ ! -d "\$REPO_DIR/dists/stable" ]]; then
-    echo "❌ Error: Repository not found in \$REPO_DIR"
+# Auto-detect script location and find repository root
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+
+# If running from docs/apt/, the repo root is two levels up
+if [[ "\$(basename "\$(dirname "\$SCRIPT_DIR")")" == "docs" ]]; then
+    REPO_ROOT="\$(dirname "\$(dirname "\$SCRIPT_DIR")")"
+    APT_DIR="\$SCRIPT_DIR"
+else
+    # If running from repo root, look for docs/apt/
+    REPO_ROOT="\$SCRIPT_DIR"
+    APT_DIR="\$REPO_ROOT/docs/apt"
+fi
+
+# Check if we can find the repository structure
+if [[ ! -d "\$APT_DIR/dists/stable" ]]; then
+    echo "❌ Error: Repository not found"
+    echo "💡 Expected structure: docs/apt/dists/stable/"
+    echo "💡 Current APT dir: \$APT_DIR"
     exit 1
 fi
 
-cd "\$REPO_DIR/dists/stable"
+echo "📂 Repository root: \$REPO_ROOT"
+echo "📁 APT directory: \$APT_DIR"
+
+cd "\$APT_DIR/dists/stable"
 
 # Verify Release.gpg
 if gpg --verify Release.gpg Release 2>/dev/null; then
     echo "✅ Release.gpg signature valid"
 else
     echo "❌ Release.gpg signature invalid or key not imported"
-    echo "💡 Import the repository key first"
+    echo "💡 Import the repository key: gpg --import \$REPO_ROOT/keys/apt-repo-pubkey.asc"
     exit 1
 fi
 
@@ -203,6 +253,10 @@ EOF
 
 chmod +x "$APT_REPO_DIR/verify-repo.sh"
 
+# Also create a copy in the repository root for convenience
+cp "$APT_REPO_DIR/verify-repo.sh" "$WORKSPACE_ROOT/verify-repo.sh"
+echo "📝 Created verification script in APT directory and repository root"
+
 echo ""
 echo "🎉 Repository signing completed successfully!"
 echo "═══════════════════════════════════════════"
@@ -218,5 +272,7 @@ echo "   - SIGNED (signing summary)"
 echo "   - verify-repo.sh (verification script)"
 echo ""
 echo "🔐 Repository is now cryptographically signed!"
-echo "💡 Users can verify with: bash verify-repo.sh"
+echo "💡 Users can verify with:"
+echo "   - From repository root: bash verify-repo.sh"
+echo "   - From APT directory: cd docs/apt && bash verify-repo.sh"
 
