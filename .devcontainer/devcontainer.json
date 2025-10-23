@@ -1,0 +1,46 @@
+{
+  "name": "Debian12 DevContainer (packaging)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+	"USER_UID": "${localEnv:UID}",
+    	"USER_GID": "${localEnv:PID}",
+	"USERNAME": "${localEnv:USER}"
+    },
+    "context": "."
+  },
+  "image": null,
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  
+  // Run as the non-root user you set in Dockerfile
+  "containerUser": "dev",
+  "remoteUser": "dev",
+  
+  // Ensure that on Linux the container’s user UID/GID match your host user
+  "updateRemoteUserUID": true,
+  
+  // Forward ports if needed
+  "forwardPorts": [],
+
+  // Any additional run arguments (if you need device access, volume mounts etc)
+  "runArgs": [
+    // For example, mount host’s GPG agent socket if you go that route
+    // "--volume=/run/user/1000/gnupg/S.gpg-agent:/run/user/1000/gnupg/S.gpg-agent"
+  ],
+
+  // Tools to run after the container is created
+  "postCreateCommand": "git config --global user.name \"Your Name\" && git config --global user.email \"you@example.com\"",
+  
+  // Optional settings for VS Code
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  
+  "extensions": [
+    // Add any VS Code extensions you want inside container
+    "ms-vscode.cpptools",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ]
+}
+

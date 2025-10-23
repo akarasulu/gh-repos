@@ -1,0 +1,19 @@
+docs_dir: mkdocs
+site_dir: docs
+site_name: gh-repos
+site_description: GitHup pages as apt repositories
+repo_url: https://github.com/akarasulu/gh-repos
+repo_name: gh-repos
+nav:
+  - Home: index.md
+  - Customize: customize.md
+  - Releases: releases.md
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+markdown_extensions:
+  - toc:
+      permalink: true
+
