@@ -11,6 +11,33 @@ APT_REPO_DIR="$DOCS_DIR/apt"
 DEB_OUTPUT_DIR="$WORKSPACE_ROOT/debs"
 KEYS_DIR="$WORKSPACE_ROOT/keys"
 
+repo_owner=""
+repo_name=""
+
+if [[ -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then
+    repo_owner="${BASH_REMATCH[1]}"
+    repo_name="${BASH_REMATCH[2]}"
+else
+    origin_url=$(git -C "$WORKSPACE_ROOT" config --get remote.origin.url 2>/dev/null || echo "")
+    if [[ "$origin_url" =~ ^git@github\.com:([^/]+)/(.+?)(\.git)?$ ]]; then
+        repo_owner="${BASH_REMATCH[1]}"
+        repo_name="${BASH_REMATCH[2]}"
+    elif [[ "$origin_url" =~ ^https://github\.com/([^/]+)/(.+?)(\.git)?$ ]]; then
+        repo_owner="${BASH_REMATCH[1]}"
+        repo_name="${BASH_REMATCH[2]}"
+    fi
+fi
+
+if [[ -z "$repo_owner" || -z "$repo_name" ]]; then
+    repo_owner="username"
+    repo_name="apt-repo"
+fi
+
+docs_url="https://${repo_owner}.github.io/${repo_name}"
+repo_label="${repo_name} APT Repository"
+apt_list_name="${repo_name}.list"
+gpg_key_name="${repo_name}.asc"
+
 echo "🏗️  Creating APT repository structure..."
 
 # Create APT repository directories
@@ -26,11 +53,18 @@ fi
 # Copy .deb packages to pool directory
 echo "📦 Copying packages to repository pool..."
 package_count=0
+declare -A package_seen=()
+package_list=()
 for deb_file in "$DEB_OUTPUT_DIR"/*.deb; do
     if [[ -f "$deb_file" ]]; then
         cp "$deb_file" "$APT_REPO_DIR/pool/"
         echo "   - $(basename "$deb_file")"
         package_count=$((package_count + 1))
+        pkg_name=$(dpkg-deb -f "$deb_file" Package 2>/dev/null || basename "$deb_file")
+        if [[ -n "$pkg_name" && -z "${package_seen[$pkg_name]:-}" ]]; then
+            package_seen["$pkg_name"]=1
+            package_list+=("$pkg_name")
+        fi
     fi
 done
 
@@ -109,15 +143,15 @@ echo "📄 Creating Release file..."
 release_file="$APT_REPO_DIR/dists/stable/Release"
 
 cat > "$release_file" << EOF
-Origin: GH-Repos
-Label: GH-Repos APT Repository
+Origin: ${repo_name}
+Label: ${repo_label}
 Suite: stable
 Version: 1.0
 Codename: stable
 Date: $(date -Ru)
 Architectures: amd64 arm64 all
 Components: main
-Description: APT repository hosted on GitHub Pages
+Description: APT repository for ${repo_name} hosted on GitHub Pages
 EOF
 
 # Calculate checksums for Release file
@@ -146,31 +180,38 @@ echo "SHA256:" >> "$release_file"
 done) >> "$release_file"
 
 # Create repository configuration file for users
+package_summary="<package-name>"
+if [[ ${#package_list[@]} -gt 0 ]]; then
+    package_summary=$(IFS=', '; echo "${package_list[*]}")
+fi
+
 echo "📝 Creating repository configuration..."
-cat > "$APT_REPO_DIR/repo-setup.sh" << 'EOF'
+cat > "$APT_REPO_DIR/repo-setup.sh" << EOF
 #!/bin/bash
 # Repository setup script for users
 
-REPO_URL="https://$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f1).github.io/$(echo "$GITHUB_REPOSITORY" | cut -d'/' -f2)"
+REPO_URL="${docs_url}/apt"
+KEY_DEST="/etc/apt/trusted.gpg.d/${gpg_key_name}"
+LIST_DEST="/etc/apt/sources.list.d/${apt_list_name}"
 
-echo "🔧 Adding GH-Repos APT repository..."
+echo "🔧 Adding ${repo_name} APT repository..."
 
 # Check if we're on a system that supports the modern method
 if [[ -d "/etc/apt/trusted.gpg.d" ]]; then
     echo "📥 Downloading and installing GPG key..."
     # Download GPG key to trusted.gpg.d (modern method)
-    curl -fsSL "$REPO_URL/apt/apt-repo-pubkey.asc" | sudo tee /etc/apt/trusted.gpg.d/gh-repos.asc > /dev/null
-    echo "✅ GPG key installed to /etc/apt/trusted.gpg.d/gh-repos.asc"
+    curl -fsSL "\$REPO_URL/apt-repo-pubkey.asc" | sudo tee "\$KEY_DEST" > /dev/null
+    echo "✅ GPG key installed to \$KEY_DEST"
 else
     echo "📥 Downloading and installing GPG key (legacy method)..."
     # Fallback to apt-key for older systems
-    curl -fsSL "$REPO_URL/apt/apt-repo-pubkey.asc" | sudo apt-key add -
+    curl -fsSL "\$REPO_URL/apt-repo-pubkey.asc" | sudo apt-key add -
     echo "✅ GPG key added via apt-key"
 fi
 
 echo "📝 Adding repository to sources..."
 # Add repository to sources
-echo "deb $REPO_URL/apt stable main" | sudo tee /etc/apt/sources.list.d/gh-repos.list
+echo "deb \$REPO_URL stable main" | sudo tee "\$LIST_DEST"
 
 echo "🔄 Updating package list..."
 # Update package list
@@ -178,7 +219,7 @@ sudo apt update
 
 echo "🎉 Repository added successfully!"
 echo "📦 Install packages with: sudo apt install <package-name>"
-echo "📋 Available packages: hello-world, dev-tools, mock-monitor, sys-info"
+echo "📋 Available packages: ${package_summary}"
 EOF
 
 chmod +x "$APT_REPO_DIR/repo-setup.sh"
@@ -188,7 +229,7 @@ cat > "$APT_REPO_DIR/index.html" << EOF
 <!DOCTYPE html>
 <html>
 <head>
-    <title>GH-Repos APT Repository</title>
+    <title>${repo_label}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; }
         .container { max-width: 800px; margin: 0 auto; }
@@ -198,16 +239,16 @@ cat > "$APT_REPO_DIR/index.html" << EOF
 </head>
 <body>
     <div class="container">
-        <h1>GH-Repos APT Repository</h1>
-        <p>This is an APT repository hosted on GitHub Pages.</p>
+        <h1>${repo_label}</h1>
+        <p>This is an APT repository hosted on GitHub Pages for <strong>${repo_name}</strong>.</p>
         
         <h2>Quick Setup</h2>
         <pre><code># Download and run setup script
-curl -fsSL \$(echo \$REPO_URL)/apt/repo-setup.sh | bash
+curl -fsSL ${docs_url}/apt/repo-setup.sh | bash
 
 # Or manual setup:
-curl -fsSL \$(echo \$REPO_URL)/apt/apt-repo-pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/gh-repos.asc > /dev/null
-echo "deb \$(echo \$REPO_URL)/apt stable main" | sudo tee /etc/apt/sources.list.d/gh-repos.list
+curl -fsSL ${docs_url}/apt/apt-repo-pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/${gpg_key_name} > /dev/null
+echo "deb ${docs_url}/apt stable main" | sudo tee /etc/apt/sources.list.d/${apt_list_name}
 sudo apt update</code></pre>
 
         <h2>Available Packages</h2>
@@ -251,4 +292,4 @@ find "$APT_REPO_DIR" -type f | sort | sed 's|^'"$APT_REPO_DIR"'|   apt|'
 echo ""
 echo "✅ APT repository created successfully!"
 echo "🔐 Note: Repository metadata is unsigned - run signrepo.sh on host to sign"
-echo "🌐 Repository will be available at: https://username.github.io/repo-name/apt/"
+echo "🌐 Repository will be available at: ${docs_url}/apt/"

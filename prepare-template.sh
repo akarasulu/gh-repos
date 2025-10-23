@@ -18,6 +18,77 @@ EOF
 PROMPT_FD=0
 PROMPT_FD_SET="no"
 
+parse_repo_url() {
+    local url="$1"
+    if [[ "$url" =~ ^git@github\.com:([^/]+)/(.+?)(\.git)?$ ]]; then
+        REPO_OWNER="${BASH_REMATCH[1]}"
+        REPO_NAME="${BASH_REMATCH[2]}"
+    elif [[ "$url" =~ ^https://github\.com/([^/]+)/(.+?)(\.git)?$ ]]; then
+        REPO_OWNER="${BASH_REMATCH[1]}"
+        REPO_NAME="${BASH_REMATCH[2]}"
+    else
+        echo "Unable to parse repository owner/name from URL: $url" >&2
+        exit 1
+    fi
+}
+
+update_mkdocs_config() {
+    local owner="$1"
+    local repo="$2"
+    local repo_url="https://github.com/${owner}/${repo}"
+    local docs_url="https://${owner}.github.io/${repo}"
+
+    python3 - <<PY
+from pathlib import Path
+import re
+
+path = Path("mkdocs.yml")
+if not path.exists():
+    raise SystemExit("mkdocs.yml not found; cannot update configuration.")
+
+owner = ${owner@Q}
+repo = ${repo@Q}
+repo_url = ${repo_url@Q}
+docs_url = ${docs_url@Q} + "/"
+
+def humanize(name: str) -> str:
+    if not name:
+        return "Project Documentation"
+    parts = re.split(r"[-_]+", name)
+    words = [word.capitalize() for word in parts if word]
+    return " ".join(words) if words else name
+
+text = path.read_text()
+
+def set_line(content: str, key: str, value: str) -> str:
+    pattern = rf"^{key}:\s?.*$"
+    replacement = f"{key}: {value}"
+    if re.search(pattern, content, flags=re.MULTILINE):
+        return re.sub(pattern, replacement, content, flags=re.MULTILINE)
+    return content + "\n" + replacement + "\n"
+
+site_name = humanize(repo)
+text = set_line(text, "site_name", f'"{site_name}"')
+text = set_line(text, "repo_url", repo_url)
+text = set_line(text, "repo_name", repo)
+
+text = re.sub(
+    r"(link:\s*)https://github\.com/[^\s]+",
+    rf"\\1{repo_url}",
+    text,
+    count=1,
+)
+text = re.sub(
+    r"(link:\s*)https://[A-Za-z0-9_.-]+\.github\.io/[^\s/]+/?",
+    rf"\\1{docs_url}",
+    text,
+    count=1,
+)
+
+path.write_text(text)
+PY
+}
+
 prompt() {
     local message="$1"
     local input
@@ -74,6 +145,8 @@ else
     repo_url="$1"
 fi
 
+parse_repo_url "$repo_url"
+
 derive_dir_name() {
     local url="$1"
     local trimmed="${url%%.git}"
@@ -106,6 +179,9 @@ fi
 echo "🧹 Resetting MkDocs source content..."
 rm -rf mkdocs/*
 cp -R templates/mkdocs/. mkdocs/
+
+echo "🛠️  Updating MkDocs configuration with repository details..."
+update_mkdocs_config "$REPO_OWNER" "$REPO_NAME"
 
 echo "🧽 Clearing generated docs and previous APT repository..."
 rm -rf docs

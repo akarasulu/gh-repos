@@ -1,4 +1,4 @@
-# GH-Repos Quickstart
+# Project Quickstart
 
 Follow this guide after you fork the upstream repository to prepare it for your project.
 
@@ -12,8 +12,8 @@ Follow this guide after you fork the upstream repository to prepare it for your 
 > ⚠️ Always review scripts before piping them to `bash`.
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/<your-account>/gh-repos/main/prepare-template.sh | \
-  bash -s -- git@github.com:<your-account>/gh-repos.git
+curl -sSL https://raw.githubusercontent.com/<your-account>/<your-repo-name>/main/prepare-template.sh | \
+  bash -s -- git@github.com:<your-account>/<your-repo-name>.git
 ```
 
 The script performs the following:
@@ -27,7 +27,7 @@ The script performs the following:
 You can pass an optional second argument to choose the target directory name:
 
 ```bash
-bash prepare-template.sh https://github.com/<your-account>/gh-repos.git my-project-docs
+bash prepare-template.sh https://github.com/<your-account>/<your-repo-name>.git my-project-docs
 ```
 
 ## 3. Customize the Template

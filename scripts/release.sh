@@ -34,6 +34,28 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
+origin_url=$(git -C "$WORKSPACE_ROOT" config --get remote.origin.url 2>/dev/null || echo "")
+if [[ -z "$origin_url" ]]; then
+    echo "❌ Error: Unable to determine git remote origin URL"
+    exit 1
+fi
+
+if [[ "$origin_url" =~ ^git@github\.com:([^/]+)/(.+?)(\.git)?$ ]]; then
+    repo_owner="${BASH_REMATCH[1]}"
+    repo_name="${BASH_REMATCH[2]}"
+elif [[ "$origin_url" =~ ^https://github\.com/([^/]+)/(.+?)(\.git)?$ ]]; then
+    repo_owner="${BASH_REMATCH[1]}"
+    repo_name="${BASH_REMATCH[2]}"
+else
+    echo "❌ Error: Unsupported remote origin format: $origin_url"
+    exit 1
+fi
+
+repo_slug="${repo_owner}/${repo_name}"
+docs_url="https://${repo_owner}.github.io/${repo_name}"
+apt_list_name="${repo_name}.list"
+gpg_key_name="${repo_name}.asc"
+
 # Get latest tag
 latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
@@ -61,13 +83,13 @@ fi
 echo "🏷️  Creating release for tag: $release_tag"
 
 # Check if release already exists
-if gh release view "$release_tag" &> /dev/null; then
+if gh release view "$release_tag" --repo "$repo_slug" &> /dev/null; then
     echo "⚠️  Release $release_tag already exists"
     read -p "🤔 Delete and recreate? [y/N]: " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "🗑️  Deleting existing release..."
-        gh release delete "$release_tag" --yes
+        gh release delete "$release_tag" --yes --repo "$repo_slug"
     else
         echo "❌ Release cancelled by user"
         exit 1
@@ -144,11 +166,12 @@ fi
 
 # Create repository archive
 echo "📁 Creating repository archive..."
-repo_archive="$artifacts_dir/gh-repos-apt-repository-$release_tag.tar.gz"
+repo_archive_name="${repo_name}-apt-repository-$release_tag.tar.gz"
+repo_archive="$artifacts_dir/$repo_archive_name"
 
 if [[ -d "$DOCS_DIR/apt" ]]; then
     tar -czf "$repo_archive" -C "$DOCS_DIR" apt/
-    echo "   ✅ Created repository archive: $(basename "$repo_archive")"
+    echo "   ✅ Created repository archive: $repo_archive_name"
 else
     echo "   ⚠️  No APT repository found to archive"
 fi
@@ -156,32 +179,27 @@ fi
 # Create installation script
 cat > "$artifacts_dir/install-repository.sh" << EOF
 #!/bin/bash
-# Installation script for gh-repos APT repository
+# Installation script for ${repo_name} APT repository
 
 set -euo pipefail
 
 # Repository configuration
-REPO_OWNER="\$(echo "\$GITHUB_REPOSITORY" | cut -d'/' -f1 2>/dev/null || echo 'UNKNOWN')"
-REPO_NAME="\$(echo "\$GITHUB_REPOSITORY" | cut -d'/' -f2 2>/dev/null || echo 'UNKNOWN')"
+REPO_OWNER="${repo_owner}"
+REPO_NAME="${repo_name}"
+REPO_URL="https://\${REPO_OWNER}.github.io/\${REPO_NAME}"
+KEY_DEST="/etc/apt/trusted.gpg.d/${gpg_key_name}"
+LIST_DEST="/etc/apt/sources.list.d/${apt_list_name}"
 
-if [[ "\$REPO_OWNER" == "UNKNOWN" ]]; then
-    echo "Please set GITHUB_REPOSITORY environment variable or edit this script"
-    echo "Example: export GITHUB_REPOSITORY=\"username/repo-name\""
-    exit 1
-fi
-
-REPO_URL="https://\$REPO_OWNER.github.io/\$REPO_NAME"
-
-echo "Installing gh-repos APT repository..."
-echo "Repository: \$REPO_URL"
+echo "Installing \${REPO_NAME} APT repository..."
+echo "Repository: \${REPO_URL}"
 
 # Download and add GPG key
 echo "Adding GPG key..."
-curl -fsSL "\$REPO_URL/apt/apt-repo-pubkey.asc" | sudo apt-key add -
+curl -fsSL "\${REPO_URL}/apt/apt-repo-pubkey.asc" | sudo tee "\${KEY_DEST}" > /dev/null
 
 # Add repository
 echo "Adding repository to sources..."
-echo "deb \$REPO_URL/apt stable main" | sudo tee /etc/apt/sources.list.d/gh-repos.list
+echo "deb \${REPO_URL}/apt stable main" | sudo tee "\${LIST_DEST}"
 
 # Update package lists
 echo "Updating package lists..."
@@ -241,16 +259,16 @@ cat >> "$release_notes_file" << EOF
 ### Quick Setup
 \`\`\`bash
 # Download and run installation script
-curl -fsSL https://github.com/OWNER/REPO/releases/download/$release_tag/install-repository.sh | bash
+curl -fsSL https://github.com/$repo_slug/releases/download/$release_tag/install-repository.sh | bash
 \`\`\`
 
 ### Manual Setup
 \`\`\`bash
 # Add GPG key
-curl -fsSL https://OWNER.github.io/REPO/apt/apt-repo-pubkey.asc | sudo apt-key add -
+curl -fsSL $docs_url/apt/apt-repo-pubkey.asc | sudo tee /etc/apt/trusted.gpg.d/$gpg_key_name > /dev/null
 
 # Add repository
-echo "deb https://OWNER.github.io/REPO/apt stable main" | sudo tee /etc/apt/sources.list.d/gh-repos.list
+echo "deb $docs_url/apt stable main" | sudo tee /etc/apt/sources.list.d/$apt_list_name
 
 # Update and install
 sudo apt update
@@ -261,7 +279,7 @@ sudo apt install <package-name>
 
 - **SHA256SUMS**: Checksums for all packages
 - **install-repository.sh**: Automated setup script
-- **gh-repos-apt-repository-$release_tag.tar.gz**: Complete APT repository archive
+- **${repo_name}-apt-repository-$release_tag.tar.gz**: Complete APT repository archive
 
 ## 🔐 Security
 
@@ -295,6 +313,7 @@ echo "🎉 Creating GitHub release..."
 
 release_args=(
     "release" "create" "$release_tag"
+    "--repo" "$repo_slug"
     "--title" "Release $release_tag"
     "--notes-file" "$release_notes_file"
 )
@@ -319,7 +338,7 @@ fi
 echo ""
 echo "🎉 Release $release_tag created successfully!"
 echo "═══════════════════════════════════════════════"
-echo "🌐 Release URL: https://github.com/$(gh repo view --json owner,name -q '.owner.login + "/" + .name')/releases/tag/$release_tag"
+echo "🌐 Release URL: https://github.com/$repo_slug/releases/tag/$release_tag"
 echo "📦 Packages: $deb_count"
 echo "📁 Artifacts: $(find "$artifacts_dir" -type f | wc -l)"
 
@@ -347,4 +366,3 @@ fi
 echo ""
 echo "🎉 Release process completed!"
 echo "💡 Users can now install packages from your repository"
-
