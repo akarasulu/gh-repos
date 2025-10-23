@@ -107,10 +107,11 @@ fi
 
 echo "🎯 Publishing version: $version"
 
-# Stage docs directory
+# Stage docs, mkdocs source, and configuration
 echo ""
 echo "📁 Staging docs directory..."
 git add "$DOCS_DIR"
+git add mkdocs mkdocs.yml 2>/dev/null || true
 
 # Check what we're about to commit
 echo "📋 Changes to be committed:"
@@ -272,4 +273,3 @@ if [[ -n "${pages_url:-}" ]]; then
     echo "🌐 Your site will be available at: $pages_url"
     echo "📦 APT repository at: $pages_url/apt/"
 fi
-

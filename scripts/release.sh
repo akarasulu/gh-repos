@@ -51,6 +51,15 @@ else
     exit 1
 fi
 
+config_owner=$(git -C "$WORKSPACE_ROOT" config --get gh-repos.owner 2>/dev/null || true)
+config_name=$(git -C "$WORKSPACE_ROOT" config --get gh-repos.name 2>/dev/null || true)
+if [[ -z "$repo_owner" && -n "$config_owner" ]]; then
+    repo_owner="$config_owner"
+fi
+if [[ -z "$repo_name" && -n "$config_name" ]]; then
+    repo_name="$config_name"
+fi
+
 repo_name="${repo_name%.git}"
 
 if [[ ( -z "$repo_owner" || -z "$repo_name" ) && -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then

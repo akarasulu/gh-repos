@@ -28,6 +28,67 @@ repo_name=""
         fi
     fi
 
+config_owner=$(git -C "$WORKSPACE_ROOT" config --get gh-repos.owner 2>/dev/null || true)
+config_name=$(git -C "$WORKSPACE_ROOT" config --get gh-repos.name 2>/dev/null || true)
+if [[ -z "$repo_owner" && -n "$config_owner" ]]; then
+    repo_owner="$config_owner"
+fi
+if [[ -z "$repo_name" && -n "$config_name" ]]; then
+    repo_name="$config_name"
+fi
+
+mkdocs_repo_name=""
+mkdocs_repo_owner=""
+mkdocs_repo_title=""
+if command -v python3 >/dev/null 2>&1; then
+    eval "$(
+        cd "$WORKSPACE_ROOT" && python3 - <<'PY'
+from pathlib import Path
+import re
+
+repo_name = ""
+repo_owner = ""
+site_name = ""
+
+path = Path("mkdocs.yml")
+if path.exists():
+    for raw_line in path.read_text().splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("repo_name:"):
+            repo_name = line.split(":", 1)[1].strip().strip("'\"")
+        elif line.startswith("site_name:"):
+            site_name = line.split(":", 1)[1].strip().strip("'\"")
+        elif line.startswith("repo_url:"):
+            repo_url = line.split(":", 1)[1].strip().strip("'\"")
+            match = re.match(r"https://github\.com/([^/]+)/([^/\s]+)", repo_url)
+            if match:
+                repo_owner = match.group(1)
+                if not repo_name:
+                    repo_name = match.group(2)
+
+def humanize(name: str) -> str:
+    parts = re.split(r"[-_]+", name)
+    words = [part.capitalize() for part in parts if part]
+    return " ".join(words) if words else name
+
+preferred_title = site_name or humanize(repo_name)
+
+print(f"mkdocs_repo_name={repo_name!r}")
+print(f"mkdocs_repo_owner={repo_owner!r}")
+print(f"mkdocs_repo_title={preferred_title!r}")
+PY
+    )"
+fi
+
+if [[ -z "$repo_owner" && -n "${mkdocs_repo_owner:-}" ]]; then
+    repo_owner="$mkdocs_repo_owner"
+fi
+if [[ -z "$repo_name" && -n "${mkdocs_repo_name:-}" ]]; then
+    repo_name="$mkdocs_repo_name"
+fi
+
 repo_name="${repo_name%.git}"
 
 if [[ ( -z "$repo_owner" || -z "$repo_name" ) && -n "${GITHUB_REPOSITORY:-}" && "$GITHUB_REPOSITORY" =~ ^([^/]+)/([^/]+)$ ]]; then
@@ -54,7 +115,8 @@ if [[ -z "$repo_name" ]]; then
 fi
 
 docs_url="https://${repo_owner}.github.io/${repo_name}"
-repo_label="${repo_name} APT Repository"
+site_label="${mkdocs_repo_title:-$repo_name}"
+repo_label="${site_label} APT Repository"
 apt_list_name="${repo_name}.list"
 gpg_key_name="${repo_name}.asc"
 
@@ -171,7 +233,7 @@ Codename: stable
 Date: $(date -Ru)
 Architectures: amd64 arm64 all
 Components: main
-Description: APT repository for ${repo_name} hosted on GitHub Pages
+Description: APT repository for ${site_label} hosted on GitHub Pages
 EOF
 
 # Calculate checksums for Release file
@@ -214,7 +276,7 @@ REPO_URL="${docs_url}/apt"
 KEY_DEST="/etc/apt/trusted.gpg.d/${gpg_key_name}"
 LIST_DEST="/etc/apt/sources.list.d/${apt_list_name}"
 
-echo "🔧 Adding ${repo_name} APT repository..."
+echo "🔧 Adding ${site_label} APT repository..."
 
 # Check if we're on a system that supports the modern method
 if [[ -d "/etc/apt/trusted.gpg.d" ]]; then
@@ -260,7 +322,7 @@ cat > "$APT_REPO_DIR/index.html" << EOF
 <body>
     <div class="container">
         <h1>${repo_label}</h1>
-        <p>This is an APT repository hosted on GitHub Pages for <strong>${repo_name}</strong>.</p>
+        <p>This is an APT repository hosted on GitHub Pages for <strong>${site_label}</strong>.</p>
         
         <h2>Quick Setup</h2>
         <pre><code># Download and run setup script

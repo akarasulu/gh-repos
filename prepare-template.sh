@@ -93,6 +93,38 @@ PY
     SITE_NAME=${SITE_NAME:-"Project Documentation"}
 }
 
+reset_readme() {
+    local candidates=("README.md" "Readme.md" "readme.md")
+    local target=""
+    for candidate in "${candidates[@]}"; do
+        if [[ -f "$candidate" ]]; then
+            target="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$target" ]]; then
+        target="README.md"
+    fi
+
+    cat > "$target" <<EOF
+# ${SITE_NAME}
+
+> Replace this README with information about ${SITE_NAME}.
+
+## Quick Start
+
+- Describe how to install or use the project.
+- Outline any prerequisites or environment setup steps.
+- Link to detailed documentation once it is ready.
+
+## Next Steps
+
+- Customize the documentation in \`mkdocs/\`.
+- Update package definitions under \`pkgs/\`.
+- Remove this placeholder content when you add real details.
+EOF
+}
+
 prompt() {
     local message="$1"
     local input
@@ -187,24 +219,12 @@ cp -R templates/mkdocs/. mkdocs/
 echo "🛠️  Updating MkDocs configuration with repository details..."
 update_mkdocs_config "$REPO_OWNER" "$REPO_NAME"
 
+echo "🗃️  Persisting repository metadata for tooling..."
+git config gh-repos.owner "$REPO_OWNER"
+git config gh-repos.name "$REPO_NAME"
+
 echo "🧾 Resetting README.md placeholder..."
-cat > README.md <<EOF
-# ${SITE_NAME}
-
-> Replace this README with information about ${SITE_NAME}.
-
-## Quick Start
-
-- Describe how to install or use the project.
-- Outline any prerequisites or environment setup steps.
-- Link to detailed documentation once it is ready.
-
-## Next Steps
-
-- Customize the documentation in \`mkdocs/\`.
-- Update package definitions under \`pkgs/\`.
-- Remove this placeholder content when you add real details.
-EOF
+reset_readme
 
 echo "🧽 Clearing generated docs and previous APT repository..."
 rm -rf docs
