@@ -15,6 +15,26 @@ Arguments:
 EOF
 }
 
+prompt() {
+    local message="$1"
+    local input
+    if [[ -t 0 ]]; then
+        if ! read -rp "$message" input; then
+            echo "Input aborted." >&2
+            exit 1
+        fi
+    elif [[ -r /dev/tty ]]; then
+        if ! read -rp "$message" input < /dev/tty; then
+            echo "Input aborted." >&2
+            exit 1
+        fi
+    else
+        echo "Cannot prompt for input: no interactive terminal available." >&2
+        exit 1
+    fi
+    REPLY="$input"
+}
+
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
     exit 0
@@ -31,7 +51,8 @@ if ! command -v gpg >/dev/null 2>&1; then
 fi
 
 if [[ $# -lt 1 ]]; then
-    read -rp "Repository URL for your fork (e.g. git@github.com:user/gh-repos.git): " repo_url
+    prompt "Repository URL for your fork (e.g. git@github.com:user/gh-repos.git): "
+    repo_url="$REPLY"
     if [[ -z "${repo_url}" ]]; then
         echo "Repository URL is required." >&2
         usage >&2
@@ -126,7 +147,12 @@ done
 
 selection=""
 while [[ -z "$selection" ]]; do
-    read -rp "Select a key to export [1-${#fingerprints[@]}]: " choice
+    prompt "Select a key to export [1-${#fingerprints[@]}]: "
+    choice="$REPLY"
+    if [[ -z "$choice" ]]; then
+        echo "No selection detected. Please choose a number between 1 and ${#fingerprints[@]}."
+        continue
+    fi
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#fingerprints[@]} )); then
         selection=$((choice - 1))
     else
