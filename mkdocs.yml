@@ -8,6 +8,7 @@ repo_url: https://github.com/akarasulu/gh-repos
 repo_name: gh-repos
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   - User Guide:
     - Getting Started: usage.md
     - Customization: customize.md
@@ -83,4 +84,3 @@ extra:
   version:
     provider: mike
   generator: false
-

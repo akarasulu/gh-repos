@@ -30,20 +30,26 @@ Turn a GitHub repository into a GH Pages hosted mkdocs website with APT reposito
 
 ### 1. Setup Environment
 
-<!-- TODO: fork then clone -->
-<!-- TODO: add command to drop in your own key/... -->
 ```bash
 # Export user ID for container alignment
 export UID=$(id -u)
 export GID=$(id -g)
 
-# Fork and clone this repository
-git clone https://github.com/akarasulu/gh-repos.git
-cd gh-repos
+# Set these to match the owner/name of your fork
+FORK_OWNER=<your-account>
+FORK_REPO=<your-repo-name>
+
+# Prepare your fork with placeholder docs and a fresh public key
+curl -sSL "https://raw.githubusercontent.com/${FORK_OWNER}/${FORK_REPO}/main/prepare-template.sh" | \
+  bash -s -- "git@github.com:${FORK_OWNER}/${FORK_REPO}.git" my-project-repo
+
+cd my-project-repo  # choose any directory name when running the script
 
 # Open in VS Code Dev Container
 code .
 ```
+
+> If you omit the optional directory argument, the script uses the repository name from the URL.
 
 ### 2. Add Your Packages
 
@@ -92,7 +98,7 @@ chmod +x pkgs/my-awesome-tool/usr/bin/my-awesome-tool
 3. Select **main** branch and **/ docs** folder
 4. Wait for deployment (2-5 minutes)
 
-### 5. Users Install Your Packages
+### 5. Manually Install Your Packages
 
 ```bash
 # Add your repository
@@ -104,7 +110,7 @@ sudo apt update
 sudo apt install my-awesome-tool
 ```
 
-<!-- TODO:  or just fire up the vagrant file -->
+Or just fire up the test vagrant guest with `vagrant up` to automatically test installing your packages.
 
 ## 📁 Project Structure
 
@@ -114,6 +120,7 @@ gh-repos/
 ├── 📄 mkdocs.yml                   # Documentation configuration
 ├── 🗂️ mkdocs/                      # Documentation source
 │   ├── 📄 index.md                 # Homepage
+│   ├── 📄 quickstart.md            # Script-driven reset instructions
 │   ├── 📄 usage.md                 # Getting started guide
 │   ├── 📄 design.md                # Architecture documentation
 │   ├── 📄 build.md                 # Build process details
@@ -140,6 +147,8 @@ gh-repos/
 │   │   ├── 🗂️ dists/               # Repository metadata
 │   │   └── 🗂️ pool/                # Package files (.deb)
 │   └── 🗂️ assets/                  # Website assets
+├── 🗂️ templates/                  # Placeholder templates used by prepare-template.sh
+│   └── 🗂️ mkdocs/                  # MkDocs placeholder content
 ├── 🗂️ keys/                        # GPG public keys
 └── 🗂️ .devcontainer/               # Development container config
     ├── 📄 devcontainer.json        # Container configuration
