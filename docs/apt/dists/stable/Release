@@ -1,39 +1,39 @@
-Origin: GH-Repos
-Label: GH-Repos APT Repository
+Origin: workspace
+Label: workspace APT Repository
 Suite: stable
 Version: 1.0
 Codename: stable
-Date: Thu, 23 Oct 2025 17:09:20 +0000
+Date: Thu, 23 Oct 2025 20:42:45 +0000
 Architectures: amd64 arm64 all
 Components: main
-Description: APT repository hosted on GitHub Pages
+Description: APT repository for workspace hosted on GitHub Pages
 MD5Sum:
- c06526499b0485c153e7c685dd756f0b    1322 main/binary-amd64/Packages.gz
- c8c338635e7f43da033fbbd6b44cac1b    1356 main/binary-amd64/Packages.bz2
- 6d20513b0282b9f0e05022119834a81a    2788 main/binary-amd64/Packages
- 06cd9b11d149dac7e2cc4efdacbe3c1f    1045 main/binary-all/Packages.gz
- c207765bd68b51d15b0b3f34a8fcc163    1082 main/binary-all/Packages.bz2
- aac1b7be157dd486c373dc8ae4bc2bfb    2072 main/binary-all/Packages
- c94d3853a9e1f9e59946bfc9a6e2106b      29 main/binary-arm64/Packages.gz
+ 5ccf50fe2f72ad1df5323869a563d63f    1322 main/binary-amd64/Packages.gz
+ 70bbc87145846829c708b8d24c4c7bc0    1368 main/binary-amd64/Packages.bz2
+ 1ce0c454c3e6a7dd7fa1f46632578a2f    2788 main/binary-amd64/Packages
+ 451b617e2e1750f0a50f9387bac49d3e    1045 main/binary-all/Packages.gz
+ b7c33c3201f2ea490dccbfdee73646e1    1096 main/binary-all/Packages.bz2
+ a5ad425ff924bb43979c340b46629457    2072 main/binary-all/Packages
+ a1112630c11688381ad3ad6fcfb3d3eb      29 main/binary-arm64/Packages.gz
  4059d198768f9f8dc9372dc1c54bc3c3      14 main/binary-arm64/Packages.bz2
  d41d8cd98f00b204e9800998ecf8427e       0 main/binary-arm64/Packages
 SHA1:
- a29b3ee1a6419fea8b5793ed9a142a74452d0373    1322 main/binary-amd64/Packages.gz
- 6f659f031c6c8324f798460ff30e33601f7e7187    1356 main/binary-amd64/Packages.bz2
- ad3c5a3d5b5e6ea2ed94f5f58e066337d5d67e81    2788 main/binary-amd64/Packages
- 9cd18cae6efaa8cf58a7c245f8ee2122799df72b    1045 main/binary-all/Packages.gz
- 2c69b45996384ba5221f21e8b4a9e5e179853fcb    1082 main/binary-all/Packages.bz2
- 5d5a5c85b9072abdf6c9bf4d8b198391b6160458    2072 main/binary-all/Packages
- de1d37ad8e93b456007aa91fc3ab62eb200e677a      29 main/binary-arm64/Packages.gz
+ 55b02f914246145eba1134176f35460ae9c44e4b    1322 main/binary-amd64/Packages.gz
+ 4395d136b708e78980221f101f85014b921e1845    1368 main/binary-amd64/Packages.bz2
+ 335253f4828b5a5d8c0741d30fb0a3e6a1eb9199    2788 main/binary-amd64/Packages
+ a23d7e902a6d844a948e7f676b0f66af47dbb5f6    1045 main/binary-all/Packages.gz
+ 2881cf79e40ac5d9c7808efa5d2cdbe047dd7e50    1096 main/binary-all/Packages.bz2
+ 5aed32f02b7ebc9a19ffca9354b1c701e5b78f79    2072 main/binary-all/Packages
+ 4ab15af18338d6042ad6ebc00f2e3cdc608390e4      29 main/binary-arm64/Packages.gz
  64a543afbb5f4bf728636bdcbbe7a2ed0804adc2      14 main/binary-arm64/Packages.bz2
  da39a3ee5e6b4b0d3255bfef95601890afd80709       0 main/binary-arm64/Packages
 SHA256:
- 6147f50bdb0eadd74fa0733babef19a94cc36c26bd47b6cdd4f3b8599df164ec    1322 main/binary-amd64/Packages.gz
- 562b1823b4dc8570ed21a97f052d94da686f8efacaf9ade879db81c4e90b19e5    1356 main/binary-amd64/Packages.bz2
- 76cfe9708c6395164a6f468b326714710048eb91549d14c7553369aac5867679    2788 main/binary-amd64/Packages
- 336122c41c872f62182f29a522a975dad2c79360e4edb7ae89f47c23f0c6e3e2    1045 main/binary-all/Packages.gz
- 33f4f6681f4c932cf3fdcdeb73597510eeae63d183d89593c832a6324e952be7    1082 main/binary-all/Packages.bz2
- 5fb679f88ba0209c9e4c2e1eb5c8d7ed65396b55d7b8bd5dde72de3a62ac26fa    2072 main/binary-all/Packages
- 2673dda6b5152e0b95925611c2c2aacdc5da4f48c440d0b8b79f3cf50e41f480      29 main/binary-arm64/Packages.gz
+ 2230ab0abf37417113b71674de8abed3245b8fe3f5adf6edb183d10c8db1f5d1    1322 main/binary-amd64/Packages.gz
+ 2bd7da5b1cad4e74d1eb4a3ab2c5ea901c3bfa14f451747016e1b9742013103e    1368 main/binary-amd64/Packages.bz2
+ 88382cbf5d0d3cd2a4844dffbd0d94afd4ebdb0913b5cf6e8f4322b085d20592    2788 main/binary-amd64/Packages
+ 20e936fc9e4a199dac7edd7c0b10d167c4968bd049ad2042d94e09832ae2758d    1045 main/binary-all/Packages.gz
+ c9244ced816374b517e32a6751662e3a447a61dfa6434bdd81998e6a9c3f6d22    1096 main/binary-all/Packages.bz2
+ feafa8d92e6e3b3957aa785227352859b567f42792a777aedf2fb55c398865dd    2072 main/binary-all/Packages
+ 1fad9297f0bb01aab22c1cc9922b2cc14e1224fce9d1db4956e37538c9f2aaf0      29 main/binary-arm64/Packages.gz
  d3dda84eb03b9738d118eb2be78e246106900493c0ae07819ad60815134a8058      14 main/binary-arm64/Packages.bz2
  e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855       0 main/binary-arm64/Packages
